@@ -1,5 +1,6 @@
 const tg = window.Telegram && window.Telegram.WebApp;
-const IN_TG = !!(tg && tg.initData);
+// initData пустой при запуске с reply-кнопки, поэтому определяем Telegram по platform
+const IN_TG = !!(tg && tg.platform && tg.platform !== "unknown");
 
 const $ = (s) => document.querySelector(s);
 const byId = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
@@ -340,7 +341,7 @@ function submitOrder() {
   };
 
   // sendData() доступен только при запуске через reply-кнопку (тогда нет query_id)
-  if (IN_TG && tg.initDataUnsafe.query_id) {
+  if (IN_TG && tg.initDataUnsafe && tg.initDataUnsafe.query_id) {
     tg.showAlert("Чтобы оформить заказ, откройте магазин кнопкой «🛍 Магазин» внизу чата. Корзина сохранится.");
     return;
   }
@@ -355,7 +356,10 @@ function submitOrder() {
     tg.sendData(JSON.stringify(order));
   } else {
     // Демо-режим в обычном браузере
-    $("#done-json").textContent = JSON.stringify(order, null, 2);
+    $("#done-json").textContent =
+      order.items.map((i) => `${i.name} × ${i.qty} — ${fmt(i.price * i.qty)}`).join("\n") +
+      `\n\nИтого: ${fmt(order.total)}\n` +
+      (order.delivery === "pickup" ? "Самовывоз из салона" : `Доставка: ${order.address}`);
     state.stack = ["catalog", "done"];
     show("done");
   }
